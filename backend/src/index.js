@@ -1,30 +1,49 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import { Pool } from "pg";
+// backend/src/index.js
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { testConnection } from './db/supabase.js';
+
+// Importar rutas
+import authRoutes from './routes/auth.js';
+import gastosRoutes from './routes/gastos.js';
+import ingresosRoutes from './routes/ingresos.js';
+import presupuestosRoutes from './routes/presupuestos.js';
+import estadisticasRoutes from './routes/estadisticas.js'; // ← ASEGÚRATE QUE ESTÉ
 
 dotenv.config();
+
 const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+// Probar conexión al iniciar
+testConnection();
+
+// Rutas
+app.get('/', (req, res) => {
+  res.json({ message: '✅ API de Finanzas funcionando correctamente' });
 });
 
-app.get("/test-db", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT NOW()");
-    res.send(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Error en la conexión a la base de datos");
-  }
+app.use('/api/auth', authRoutes);
+app.use('/api/gastos', gastosRoutes);
+app.use('/api/ingresos', ingresosRoutes);
+app.use('/api/presupuestos', presupuestosRoutes);
+app.use('/api/estadisticas', estadisticasRoutes); // ← ASEGÚRATE QUE ESTÉ
+
+// Manejo de errores
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ 
+    error: 'Algo salió mal!',
+    message: err.message 
+  });
 });
 
-app.get("/", (req, res) => {
-  res.send("Servidor activo 🟢");
+// Iniciar servidor
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
-
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Servidor en puerto ${PORT}`));
