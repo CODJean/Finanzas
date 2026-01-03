@@ -34,3 +34,114 @@ body {
     @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
   }
 }
+/* Dark Mode */
+html.dark {
+  background: #1a1a1a;
+}
+
+html.dark body {
+  background: #1a1a1a;
+  color: #ffffff;
+}
+
+/* Modo claro - Forzar fondo blanco */
+html:not(.dark) {
+  background: #ffffff;
+}
+
+html:not(.dark) body {
+  background: #f8fafc;
+  color: #000000;
+}
+
+.dark .card {
+  background: #2d2d2d;
+  color: #ffffff;
+}
+
+.dark .text-gray-900 {
+  color: #ffffff !important;
+}
+
+.dark .text-gray-800 {
+  color: #e5e5e5 !important;
+}
+
+.dark .text-gray-700 {
+  color: #d4d4d4 !important;
+}
+
+.dark .text-gray-600 {
+  color: #a3a3a3 !important;
+}
+
+.dark .text-gray-500 {
+  color: #737373 !important;
+}
+
+.dark .bg-white {
+  background: #2d2d2d !important;
+}
+
+.dark .bg-gray-50 {
+  background: #262626 !important;
+}
+
+.dark .bg-gray-100 {
+  background: #333333 !important;
+}
+
+.dark .border-gray-300 {
+  border-color: #404040 !important;
+}
+
+.dark .input-field {
+  background: #333333;
+  color: #ffffff;
+  border-color: #404040;
+}
+
+.dark .input-field:focus {
+  background: #3d3d3d;
+}
+/* Mejoras de contraste en modo claro */
+html:not(.dark) .card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+html:not(.dark) h1,
+html:not(.dark) h2,
+html:not(.dark) h3 {
+  color: #111827 !important;
+}
+
+html:not(.dark) .text-gray-600 {
+  color: #4b5563 !important;
+}
+/* Navbar en dark mode */
+.dark nav {
+  background: #2d2d2d !important;
+}
+/* Animación para el botón del chat */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Mejora visual del botón flotante */
+.fixed.bottom-6.right-6 {
+  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.4);
+}
+
+.dark .fixed.bottom-6.right-6 {
+  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.6);
+}

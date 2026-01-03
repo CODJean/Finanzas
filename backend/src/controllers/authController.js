@@ -119,3 +119,85 @@ export const getProfile = async (req, res) => {
     res.status(500).json({ error: 'Error al obtener perfil' });
   }
 };
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { nombre, email } = req.body;
+
+    const { data, error } = await supabase
+      .from('usuarios')
+      .update({ nombre, email })
+      .eq('id', req.user.userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      message: 'Perfil actualizado exitosamente',
+      user: {
+        id: data.id,
+        email: data.email,
+        nombre: data.nombre
+      }
+    });
+  } catch (error) {
+    console.error('Error al actualizar perfil:', error);
+    res.status(500).json({ error: 'Error al actualizar perfil' });
+  }
+};
+
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    const { data: user, error: userError } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('id', req.user.userId)
+      .single();
+
+    if (userError || !user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const validPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Contraseña actual incorrecta' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const { error } = await supabase
+      .from('usuarios')
+      .update({ password: hashedPassword })
+      .eq('id', req.user.userId);
+
+    if (error) throw error;
+
+    res.json({ message: 'Contraseña actualizada exitosamente' });
+  } catch (error) {
+    console.error('Error al cambiar contraseña:', error);
+    res.status(500).json({ error: 'Error al cambiar contraseña' });
+  }
+};
+
+export const deleteAccount = async (req, res) => {
+  try {
+    await supabase.from('gastos').delete().eq('usuario_id', req.user.userId);
+    await supabase.from('ingresos').delete().eq('usuario_id', req.user.userId);
+    await supabase.from('presupuestos').delete().eq('usuario_id', req.user.userId);
+    
+    const { error } = await supabase
+      .from('usuarios')
+      .delete()
+      .eq('id', req.user.userId);
+
+    if (error) throw error;
+
+    res.json({ message: 'Cuenta eliminada exitosamente' });
+  } catch (error) {
+    console.error('Error al eliminar cuenta:', error);
+    res.status(500).json({ error: 'Error al eliminar cuenta' });
+  }
+};

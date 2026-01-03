@@ -1,7 +1,19 @@
-// backend/src/index.js
+
+// ESTO DEBE SER LO PRIMERO DE TODO
+import { config } from 'dotenv';
+config();
+
+// Verificar que las variables se cargaron
+console.log('🔍 Verificando variables de entorno:');
+console.log('   PORT:', process.env.PORT || '❌ NO DEFINIDO');
+console.log('   SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ OK' : '❌ NO DEFINIDO');
+console.log('   JWT_SECRET:', process.env.JWT_SECRET ? '✅ OK' : '❌ NO DEFINIDO');
+console.log('   GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? '✅ OK' : '❌ NO DEFINIDO'); // CAMBIO AQUÍ
+
+// ... resto del código igual
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { testConnection } from './db/supabase.js';
 
 // Importar rutas
@@ -9,9 +21,8 @@ import authRoutes from './routes/auth.js';
 import gastosRoutes from './routes/gastos.js';
 import ingresosRoutes from './routes/ingresos.js';
 import presupuestosRoutes from './routes/presupuestos.js';
-import estadisticasRoutes from './routes/estadisticas.js'; // ← ASEGÚRATE QUE ESTÉ
-
-dotenv.config();
+import estadisticasRoutes from './routes/estadisticas.js';
+import chatRoutes from './routes/chat.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -32,7 +43,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/gastos', gastosRoutes);
 app.use('/api/ingresos', ingresosRoutes);
 app.use('/api/presupuestos', presupuestosRoutes);
-app.use('/api/estadisticas', estadisticasRoutes); // ← ASEGÚRATE QUE ESTÉ
+app.use('/api/estadisticas', estadisticasRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Manejo de errores
 app.use((err, req, res, next) => {
