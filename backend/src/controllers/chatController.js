@@ -1,17 +1,75 @@
-import OpenAI from 'openai';
 import { supabase } from '../db/supabase.js';
 
-if (!process.env.DEEPSEEK_API_KEY) {
-  console.error('❌ ERROR: DEEPSEEK_API_KEY no está definida en .env');
-  throw new Error('Missing DEEPSEEK_API_KEY');
+// Determinar qué proveedor usar
+const AI_PROVIDER = process.env.AI_PROVIDER || 'deepseek'; // 'deepseek', 'gemini', 'openrouter'
+
+let aiClient;
+
+// Configurar cliente según proveedor
+if (AI_PROVIDER === 'gemini') {
+  const { GoogleGenerativeAI } = await import('@google/generative-ai');
+  
+  if (!process.env.GEMINI_API_KEY) {
+    console.error('❌ ERROR: GEMINI_API_KEY no está definida en .env');
+    throw new Error('Missing GEMINI_API_KEY');
+  }
+  
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  aiClient = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+  
+  console.log('🤖 Gemini AI inicializado correctamente ✅');
+  
+} else if (AI_PROVIDER === 'deepseek') {
+  const OpenAI = (await import('openai')).default;
+  
+  if (!process.env.DEEPSEEK_API_KEY) {
+    console.error('❌ ERROR: DEEPSEEK_API_KEY no está definida en .env');
+    throw new Error('Missing DEEPSEEK_API_KEY');
+  }
+  
+  aiClient = new OpenAI({
+    apiKey: process.env.DEEPSEEK_API_KEY,
+    baseURL: 'https://api.deepseek.com/v1'
+  });
+  
+  console.log('🤖 DeepSeek AI inicializado correctamente ✅');
 }
 
-console.log('🤖 DeepSeek AI inicializado correctamente ✅');
-
-const deepseek = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: 'https://api.deepseek.com/v1'
-});
+// Función auxiliar para chat compatible con ambos proveedores
+async function generateChatResponse(messages, systemPrompt) {
+  if (AI_PROVIDER === 'gemini') {
+    // Gemini
+    const chat = aiClient.startChat({
+      history: messages.slice(0, -1).map(msg => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      })),
+      generationConfig: {
+        maxOutputTokens: 1024,
+        temperature: 0.7,
+      },
+      systemInstruction: systemPrompt
+    });
+    
+    const lastMessage = messages[messages.length - 1];
+    const result = await chat.sendMessage(lastMessage.content);
+    return result.response.text();
+    
+  } else {
+    // DeepSeek/OpenAI
+    const completion = await aiClient.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages
+      ],
+      max_tokens: 1024,
+      temperature: 0.7,
+    });
+    
+    return completion.choices[0].message.content;
+  }
+}
 
 export const chat = async (req, res) => {
   try {
@@ -91,7 +149,6 @@ Responde SIEMPRE en español, de forma clara y motivadora.`;
 
     // Construir historial de mensajes
     const messages = [
-      { role: 'system', content: systemPrompt },
       ...conversationHistory.map(msg => ({
         role: msg.role === 'assistant' ? 'assistant' : 'user',
         content: msg.content
@@ -99,15 +156,8 @@ Responde SIEMPRE en español, de forma clara y motivadora.`;
       { role: 'user', content: message }
     ];
 
-    // Llamar a DeepSeek
-    const completion = await deepseek.chat.completions.create({
-      model: 'deepseek-chat',
-      messages: messages,
-      max_tokens: 1024,
-      temperature: 0.7,
-    });
-
-    const assistantMessage = completion.choices[0].message.content;
+    // Llamar a la IA
+    const assistantMessage = await generateChatResponse(messages, systemPrompt);
 
     res.json({
       message: assistantMessage,
@@ -120,6 +170,16 @@ Responde SIEMPRE en español, de forma clara y motivadora.`;
 
   } catch (error) {
     console.error('Error en chat:', error);
+    
+    // Manejar error de saldo insuficiente
+    if (error.status === 402 || error.message?.includes('Insufficient Balance')) {
+      return res.status(402).json({ 
+        error: 'Saldo insuficiente en la API de IA',
+        message: 'Por favor, recarga créditos en tu cuenta de DeepSeek o cambia a Gemini (gratis) en el archivo .env',
+        details: 'Configura GEMINI_API_KEY en lugar de DEEPSEEK_API_KEY'
+      });
+    }
+    
     res.status(500).json({ 
       error: 'Error al procesar el mensaje',
       details: error.message 
@@ -169,28 +229,26 @@ ${Object.entries(gastosPorCategoria)
   .join('\n')}
 `;
 
-    const completion = await deepseek.chat.completions.create({
-      model: 'deepseek-chat',
-      messages: [
-        {
-          role: 'system',
-          content: 'Eres un asesor financiero experto. Analiza y proporciona: 1) Estado actual, 2) Hallazgos principales, 3) 3 recomendaciones accionables. Usa emojis y sé motivador.'
-        },
-        {
-          role: 'user',
-          content: `${contextFinanciero}\n\nGenera un análisis financiero completo en español.`
-        }
-      ],
-      max_tokens: 800,
-      temperature: 0.7,
-    });
+    const systemPrompt = 'Eres un asesor financiero experto. Analiza y proporciona: 1) Estado actual, 2) Hallazgos principales, 3) 3 recomendaciones accionables. Usa emojis y sé motivador.';
+    
+    const messages = [
+      { role: 'user', content: `${contextFinanciero}\n\nGenera un análisis financiero completo en español.` }
+    ];
 
-    res.json({
-      analysis: completion.choices[0].message.content
-    });
+    const analysis = await generateChatResponse(messages, systemPrompt);
+
+    res.json({ analysis });
 
   } catch (error) {
     console.error('Error al obtener análisis:', error);
+    
+    if (error.status === 402 || error.message?.includes('Insufficient Balance')) {
+      return res.status(402).json({ 
+        error: 'Saldo insuficiente en la API de IA',
+        message: 'Cambia a Gemini (gratis) configurando GEMINI_API_KEY en el .env'
+      });
+    }
+    
     res.status(500).json({ error: 'Error al obtener análisis' });
   }
 };

@@ -1,12 +1,32 @@
 {
   "name": "finanzas-smart",
   "version": "1.0.0",
+  "description": "Aplicación web de control financiero inteligente",
   "scripts": {
-    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\" \"npm run ai-service\"",
     "backend": "cd backend && npm run dev",
-    "frontend": "cd frontend && npm start"
+    "frontend": "cd frontend && npm start",
+    "ai-service": "cd ai-service && python -m uvicorn app.main:app --reload --port 8000",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "build:frontend": "cd frontend && npm run build"
   },
+  "keywords": [
+    "finanzas",
+    "control-financiero",
+    "presupuestos",
+    "gastos",
+    "ingresos",
+    "ai"
+  ],
+  "author": "CODJean",
+  "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "concurrently": "^9.2.1"
   }
 }
